@@ -1,9 +1,8 @@
 #pragma once
 
-#include <optional>
 #include <filesystem>
+#include <optional>
 #include <vector>
-
 
 namespace Find {
 
@@ -15,6 +14,5 @@ struct CommandArgs {
 
   void print_help(std::string exe_name);
   static std::optional<CommandArgs> Parse(int argc, char** argv);
-
 };
 }  // namespace Find
