@@ -7,5 +7,5 @@ if (WIN32)
     add_compile_definitions(WINDOWS=on)
 endif(WIN32)
 
-add_executable(Find src/Main.cpp)
+add_executable(Find src/Main.cpp src/find.cpp)
 
