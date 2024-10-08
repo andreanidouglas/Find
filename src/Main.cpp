@@ -1,7 +1,7 @@
 
 #include <filesystem>
 #include <iostream>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include "find.hpp"
 
@@ -79,14 +79,14 @@ auto main(int argc, char** argv) -> int
                 if (match_filename(entry.path().filename().string(), name, cmd.exact())) {
                     if (cmd.to_delete()) {
                         delete_file(entry);
-                        std::cout << "[X] " << entry.path().string() << "\n";
+                        fmt::println("[x] {}", entry.path().string());
                     } else {
-                        std::cout << entry.path().string() << "\n";
+                        fmt::println("{}", entry.path().string());
                     }
                 }
 
             } else {
-                std::cout << entry.path().string() << "\n";
+                fmt::println("{}", entry.path().string());
             }
         }
 
