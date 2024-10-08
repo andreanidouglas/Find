@@ -1,8 +1,10 @@
 
 #include <filesystem>
 #include <iostream>
+#include <fmt/core.h>
 
 #include "find.hpp"
+
 
 #ifdef WINDOWS
 # include <Shobjidl.h>
