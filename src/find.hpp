@@ -2,17 +2,30 @@
 
 #include <filesystem>
 #include <optional>
-#include <vector>
 
 namespace Find {
 
 struct CommandArgs {
-    std::optional<std::string_view> name = {};
-    std::filesystem::path path = {};
-    bool to_delete = false;
-    bool exact = false;
+   private:
+    std::optional<std::string_view> m_name;
+    std::filesystem::path m_path;
+    bool m_to_delete = false;
+    bool m_exact = false;
 
-    void print_help(std::string exe_name);
-    static std::optional<CommandArgs> Parse(int argc, char** argv);
+   public:
+    static void print_help(std::string& exe_name);
+    static auto Parse(int argc, char** argv) -> std::optional<CommandArgs>;
+
+    auto name() -> std::optional<std::string_view>;
+    auto path() -> std::filesystem::path;
+
+    [[nodiscard]] auto to_delete() const -> bool
+    {
+        return m_to_delete;
+    }
+    [[nodiscard]] auto exact() const
+    {
+        return m_exact;
+    }
 };
 }  // namespace Find

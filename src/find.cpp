@@ -1,12 +1,14 @@
 #include "find.hpp"
 #include <cassert>
 #include <iostream>
+#include <vector>
 
 namespace Find {
+using std::optional;
 
-void CommandArgs::print_help(std::string exe_name)
+void CommandArgs::print_help(std::string& exe_name)
 {
-    std::filesystem::path exe = exe_name;
+    const std::filesystem::path exe = exe_name;
     std::cerr << exe.filename().string()
               << " <path> [-n | --name filename] [--delete] [-e | --exact] [-h | --help]\n\n"
               << "find all the files in a given path\n\n"
@@ -20,27 +22,31 @@ void CommandArgs::print_help(std::string exe_name)
               << "    -h, --help                 show this help message\n";
 }
 
-std::optional<CommandArgs> CommandArgs::Parse(int argc, char** argv)
+auto CommandArgs::Parse(int argc, char** argv) -> optional<CommandArgs>
 {
-    CommandArgs cmd;
 
+    CommandArgs cmd;
+    std::string args_value;
     // fatal error if there is more than 64 args
     assert(argc < 64);
 
     if (argc < 2) {
         std::cerr << "incorrect number of arguments: \n";
-        cmd.print_help(argv[0]);
+        args_value = std::string(argv[0]);
+        CommandArgs::print_help(args_value);
         return {};
     }
 
+    args_value = std::string(argv[0]);
     const std::vector<std::string_view> args(argv + 1, argv + argc);
 
     if (args[0] == "-h" || args[0] == "--help") {
-        cmd.print_help(argv[0]);
+        CommandArgs::print_help(args_value);
         return {};
     }
 
-    std::filesystem::path possible_path = args[0];
+    const std::filesystem::path possible_path = std::filesystem::path(args[0]);
+    std::cout << possible_path;
     if (possible_path.empty()) {
         std::cerr << "find: path cannot be empty\n";
         return {};
@@ -56,7 +62,7 @@ std::optional<CommandArgs> CommandArgs::Parse(int argc, char** argv)
         return {};
     }
 
-    cmd.path = possible_path;
+    cmd.m_path = possible_path;
 
     for (size_t i = 1; i < args.size(); i++) {
         if (args[i] == "-n" || args[i] == "--name") {
@@ -64,19 +70,19 @@ std::optional<CommandArgs> CommandArgs::Parse(int argc, char** argv)
                 std::cerr << "find: paramenter -n (--name) expects a filename\n";
                 return {};
             }
-            cmd.name = args[i + 1];
+            cmd.m_name = args[i + 1];
         }
 
         if (args[i] == "--delete") {
-            cmd.to_delete = true;
+            cmd.m_to_delete = true;
         }
 
         if (args[i] == "--exact") {
-            cmd.exact = true;
+            cmd.m_exact = true;
         }
 
         if (args[i] == "-h" || args[i] == "--help") {
-            cmd.print_help(argv[0]);
+            CommandArgs::print_help(args_value);
             return {};
         }
     }
@@ -84,11 +90,19 @@ std::optional<CommandArgs> CommandArgs::Parse(int argc, char** argv)
     // do not allow --delete without a --name parameter.
     // this is a safety precaution to avoid deleting the entire path, although there might
     // be other ways of doing it.
-    if (cmd.to_delete && !cmd.name.has_value()) {
+    if (cmd.m_to_delete && !cmd.m_name.has_value()) {
         std::cerr << "find: invalid operation. delete must have name paramenter";
         return {};
     }
 
     return cmd;
+}
+auto CommandArgs::path() ->  std::filesystem::path
+{
+    return m_path;
+}
+auto CommandArgs::name() -> std::optional<std::string_view>
+{
+    return m_name;
 }
 };  // namespace Find

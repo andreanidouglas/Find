@@ -9,7 +9,7 @@
 # include <Windows.h>
 #endif
 
-void delete_file(std::filesystem::path file)
+void delete_file(const std::filesystem::path& file)
 {
 #ifdef WINDOWS
     // use win32 api to delete the file sending it to recyclebin
@@ -31,12 +31,12 @@ void delete_file(std::filesystem::path file)
 
 #else
     // use c++ stl to remove file
-    // TODO: use GTK or QT filesystem api to delete the file to recycle bin
+    // TODO(andreanidouglas): use GTK or QT filesystem api to delete the file to recycle bin
     std::filesystem::remove(file);
 #endif
 }
 
-static bool match_filename(std::string_view what, std::string_view where, bool exact)
+auto match_filename(std::string_view what, std::string_view where, bool exact) -> bool
 {
     // if exact is true. we need to make sure both strings match
     if (exact) {
@@ -49,7 +49,7 @@ static bool match_filename(std::string_view what, std::string_view where, bool e
     }
 }
 
-int main(int argc, char** argv)
+auto main(int argc, char** argv) -> int
 {
     Find::CommandArgs cmd;
     const auto& args = Find::CommandArgs::Parse(argc, argv);
@@ -66,25 +66,25 @@ int main(int argc, char** argv)
 
     std::error_code ec{};
 
-    const std::filesystem::path p(cmd.path);
-    std::filesystem::recursive_directory_iterator iter(p, ec);
+    const std::filesystem::path p(cmd.path());
+    const std::filesystem::recursive_directory_iterator iter(p, ec);
 
     if (ec.value() == 0) {
         for (const auto& entry : iter) {
             ec.clear();
-            if (cmd.name.has_value()) {
-                auto name = cmd.name.value();
-                if (match_filename(entry.path().filename().string(), name, cmd.exact)) {
-                    if (cmd.to_delete) {
+            if (cmd.name().has_value()) {
+                auto name = *cmd.name();
+                if (match_filename(entry.path().filename().string(), name, cmd.exact())) {
+                    if (cmd.to_delete()) {
                         delete_file(entry);
                         std::cout << "[X] " << entry.path().string() << "\n";
                     } else {
                         std::cout << entry.path().string() << "\n";
                     }
-
-                } else {
-                    // std::cout << entry.path().string() << "\n";
                 }
+
+            } else {
+                std::cout << entry.path().string() << "\n";
             }
         }
 
