@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "find.h"
+#include "find.hpp"
 
 #ifdef WINDOWS
 # include <Shobjidl.h>
@@ -12,90 +12,89 @@
 void delete_file(std::filesystem::path file)
 {
 #ifdef WINDOWS
-  // use win32 api to delete the file sending it to recyclebin
-  // TODO: collect all files to delete and do it in one operation
+    // use win32 api to delete the file sending it to recyclebin
+    // TODO: collect all files to delete and do it in one operation
 
-  IFileOperation* pfo;
-  wchar_t path[1024] = { 0 };
-  MultiByteToWideChar(CP_THREAD_ACP, MB_PRECOMPOSED, file.string().c_str(),
-                      (size_t)file.string().size(), path, 1024);
-  IShellItem* pSI;
-  SHCreateItemFromParsingName(path, NULL, IID_PPV_ARGS(&pSI));
+    IFileOperation* pfo;
+    wchar_t path[1024] = { 0 };
+    MultiByteToWideChar(CP_THREAD_ACP, MB_PRECOMPOSED, file.string().c_str(),
+                        (size_t)file.string().size(), path, 1024);
+    IShellItem* pSI;
+    SHCreateItemFromParsingName(path, NULL, IID_PPV_ARGS(&pSI));
 
-  HRESULT hr = CoCreateInstance(__uuidof(FileOperation), NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfo));
-  if (SUCCEEDED(hr)) {
-    pfo->DeleteItem(pSI, NULL);
-    pfo->PerformOperations();
-    pfo->Release();
-  }
+    HRESULT hr = CoCreateInstance(__uuidof(FileOperation), NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfo));
+    if (SUCCEEDED(hr)) {
+        pfo->DeleteItem(pSI, NULL);
+        pfo->PerformOperations();
+        pfo->Release();
+    }
 
 #else
-  // use c++ stl to remove file
-  // TODO: use GTK or QT filesystem api to delete the file to recycle bin
-  std::filesystem::remove(file);
+    // use c++ stl to remove file
+    // TODO: use GTK or QT filesystem api to delete the file to recycle bin
+    std::filesystem::remove(file);
 #endif
 }
 
 static bool match_filename(std::string_view what, std::string_view where, bool exact)
 {
-  // if exact is true. we need to make sure both strings match
-  if (exact) {
-    return what.compare(where) == 0;
-  }
+    // if exact is true. we need to make sure both strings match
+    if (exact) {
+        return what.compare(where) == 0;
+    }
 
-  // otherwise we can use substring finding, to see if the string is contained.
-  else {
-    return what.find(where) != std::string::npos;
-  }
+    // otherwise we can use substring finding, to see if the string is contained.
+    else {
+        return what.find(where) != std::string::npos;
+    }
 }
 
 int main(int argc, char** argv)
 {
-  Find::CommandArgs cmd;
-  const auto& args = Find::CommandArgs::Parse(argc, argv);
-  if (!args.has_value()) {
-    return EXIT_FAILURE;
-  }
-  cmd = args.value();
+    Find::CommandArgs cmd;
+    const auto& args = Find::CommandArgs::Parse(argc, argv);
+    if (!args.has_value()) {
+        return EXIT_FAILURE;
+    }
+    cmd = args.value();
 
 #ifdef WINDOWS
-  HRESULT hr1 = CoInitialize(NULL);
-  if (!SUCCEEDED(hr1))
-    return EXIT_FAILURE;
+    HRESULT hr1 = CoInitialize(NULL);
+    if (!SUCCEEDED(hr1))
+        return EXIT_FAILURE;
 #endif
 
-  try {
-    // recursive_directory_iterator can fail if you dont have access to the file.
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(cmd.path)) {
-      if (cmd.name.has_value()) {
-        auto name = cmd.name.value();
-        if (match_filename(entry.path().filename().string(), name, cmd.exact)) {
-          if (cmd.to_delete) {
-            // std::filesystem::remove(entry);
+    std::error_code ec{};
 
-            delete_file(entry);
-            std::cout << "[X] " << entry.path().string() << "\n";
-          } else {
-            std::cout << entry.path().string() << "\n";
-          }
+    const std::filesystem::path p(cmd.path);
+    std::filesystem::recursive_directory_iterator iter(p, ec);
+
+    if (ec.value() == 0) {
+        for (const auto& entry : iter) {
+            ec.clear();
+            if (cmd.name.has_value()) {
+                auto name = cmd.name.value();
+                if (match_filename(entry.path().filename().string(), name, cmd.exact)) {
+                    if (cmd.to_delete) {
+                        delete_file(entry);
+                        std::cout << "[X] " << entry.path().string() << "\n";
+                    } else {
+                        std::cout << entry.path().string() << "\n";
+                    }
+
+                } else {
+                    // std::cout << entry.path().string() << "\n";
+                }
+            }
         }
-      } else {
-        std::cout << entry.path().string() << "\n";
-      }
+
+    } else {
+        std::cout << "ERROR: " << ec.value() << " " << ec.category().name() << ": " << ec.message()
+                  << "\n";
     }
-  }
-  // windows stl apparently does not implements the standard, so a lot of errors shows as unknown.
-  catch (std::filesystem::filesystem_error e) {
-    std::cerr << "could not perform operation: " << e.code().message()
-              << ". path: " << e.path1().string() << std::endl;
+
 #ifdef WINDOWS
     CoUninitialize();
 #endif
-    return EXIT_FAILURE;
-  }
-
-#ifdef WINDOWS
-  CoUninitialize();
-#endif
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
