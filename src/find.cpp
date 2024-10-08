@@ -1,5 +1,7 @@
 #include "find.hpp"
 #include <cassert>
+#include <fmt/base.h>
+#include <fmt/std.h>
 #include <iostream>
 #include <vector>
 
@@ -24,14 +26,13 @@ void CommandArgs::print_help(std::string& exe_name)
 
 auto CommandArgs::Parse(int argc, char** argv) -> optional<CommandArgs>
 {
-
     CommandArgs cmd;
     std::string args_value;
     // fatal error if there is more than 64 args
     assert(argc < 64);
 
     if (argc < 2) {
-        std::cerr << "incorrect number of arguments: \n";
+        fmt::println("Incorrect number of arguments");
         args_value = std::string(argv[0]);
         CommandArgs::print_help(args_value);
         return {};
@@ -46,19 +47,19 @@ auto CommandArgs::Parse(int argc, char** argv) -> optional<CommandArgs>
     }
 
     const std::filesystem::path possible_path = std::filesystem::path(args[0]);
-    std::cout << possible_path;
     if (possible_path.empty()) {
-        std::cerr << "find: path cannot be empty\n";
+        fmt::println("Find: path cannot be empty");
         return {};
     }
 
     if (!std::filesystem::exists(possible_path)) {
-        std::cerr << "find: " << possible_path << " does not exists or you dont have permission\n";
+        fmt::println("Find: \"{}\" does not exists or you dont have permission", possible_path);
         return {};
     }
 
+
     if (!std::filesystem::is_directory(possible_path)) {
-        std::cerr << "find: " << possible_path << " is not a directory\n";
+        fmt::println("Find: \"{}\" is not a directory", possible_path);
         return {};
     }
 
@@ -67,7 +68,7 @@ auto CommandArgs::Parse(int argc, char** argv) -> optional<CommandArgs>
     for (size_t i = 1; i < args.size(); i++) {
         if (args[i] == "-n" || args[i] == "--name") {
             if (args.size() < (i + 2)) {
-                std::cerr << "find: paramenter -n (--name) expects a filename\n";
+                fmt::println("Find: paramenter \"-n\" (--name) expects a filename");
                 return {};
             }
             cmd.m_name = args[i + 1];
@@ -91,13 +92,13 @@ auto CommandArgs::Parse(int argc, char** argv) -> optional<CommandArgs>
     // this is a safety precaution to avoid deleting the entire path, although there might
     // be other ways of doing it.
     if (cmd.m_to_delete && !cmd.m_name.has_value()) {
-        std::cerr << "find: invalid operation. delete must have name paramenter";
+        fmt::println("Find: Invalid Operation. Delete must have (--name) parameter");
         return {};
     }
 
     return cmd;
 }
-auto CommandArgs::path() ->  std::filesystem::path
+auto CommandArgs::path() -> std::filesystem::path
 {
     return m_path;
 }
